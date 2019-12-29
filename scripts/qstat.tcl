@@ -100,8 +100,8 @@ proc add_match {nick host hand chan arg} {
 	close $output
 	puthelp "NOTICE $nick :Attempted to add server."
 	putlog "match.tcl: $nick@$chan attempted to add a server to the list"
-	} else { puthelp "NOTICE $nick :Error opening file: $input"
-		 putlog "match.tcl: ERROR! Error opening file: $input"}
+	} else { puthelp "NOTICE $nick :Error opening file: $output"
+		 putlog "match.tcl: ERROR! Error opening file: $output"}
 	}
 	} else { puthelp "NOTICE $nick :Can't add empty entry" }
 	}
@@ -114,33 +114,33 @@ proc refresh_servers {nick host hand chan arg} {
 	global playerlist1
 	global optionsall
 	global optionssingle
-	
+
 	if { $arg == "" } {
-	
+
 	if {[file exists $file]} {
-	
+
 	if {[file size $file] > 0} {
-	
+
 	if ![catch {open $file r} input] {
 	while {[gets $input line] >= 0} {
 	lappend matches $line
 	}
 	close $input
 	}
-	
+
 	if ![catch {open "|$qstat $optionsall -f $file" r} input] {
-	
+
 	while {[gets $input line] >= 0} {
 	formatline $line $chan $matches
 	}
-	
+
 	close $input
 	} else { puthelp "PRIVMSG $nick :Error refreshing servers: $input " }
 	} else { puthelp "PRIVMSG $nick :No servers have been added yet..." }
 	} else { puthelp "PRIVMSG $nick :No servers have been added yet..." }
 
 	} else {
-        
+
 	set playerlist1 ""
 	if {[file exists $file]} {
 	if {[file size $file] > 0} {
@@ -159,15 +159,9 @@ proc refresh_servers {nick host hand chan arg} {
 	} else { puthelp "NOTICE $nick :Error opening file: $input" }
 	} else { puthelp "PRIVMSG $chan :No servers have been added yet..."}
 	} else { puthelp "PRIVMSG $chan :No servers have been added yet..."}
-	
-	}
-}	
 
-# binds to call the procedures:
-bind pub - $showcommand show_matches
-bind pub - $addcommand add_match
-bind pub - $delcommand del_match
-bind pub - $refreshcommand refresh_servers
+	}
+}
 
 proc formatline { line chan matches } {
 	set match [regexp {([\d]+.[\d]+.[\d]+.[\d]+:[\d]+)\
@@ -179,7 +173,7 @@ proc formatline { line chan matches } {
 	if { $match == 1 } {
 	set number [expr [lsearch $matches $address] +1]
 	puthelp "PRIVMSG $chan :($number) \0030,1\00307[format "%-21s " $address] \00315[format "%-45s " $name] \0034[format "%-7s " ($players)] \00315[format "%-10s " ($map)]"}
-}	
+}
 
 proc formatone { line chan arg } {
 	global playerlist1
@@ -200,3 +194,9 @@ proc formatone { line chan arg } {
 		}
 	}
 }
+
+# binds to call the procedures:
+bind pub - $showcommand show_matches
+bind pub - $addcommand add_match
+bind pub - $delcommand del_match
+bind pub - $refreshcommand refresh_servers

@@ -2,7 +2,6 @@
 # funwar script
 # have fun ;)
 
-
 package require sql
 
 # sql stuff:
@@ -42,12 +41,12 @@ set funwar_output_footer "*** end of funwars list ***"
 #<don´t change>
 proc funwar_post {game id date time xonx clantag irc www server org chan } {
 #</don´t change>
-	
+
 set funwar_output_body "$game $date $xonx $clantag $irc"
 
 
 #<don´t change>
-puthelp "PRIVMSG $chan :$funwar_output_body"	
+puthelp "PRIVMSG $chan :$funwar_output_body"
 }
 #</don´t change>
 
@@ -145,12 +144,12 @@ proc funwar_rtcw { nick host hand chan arg } {
 	global funwar_sql_password
 	global funwar_sql_dbname_rtcw
 	global funwar_sql_tblname_rtcw
-	
+
 	set order "id"
 	set game "RTCW"
 	set limit "10"
 	set command ""
-	
+
 	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_rtcw $funwar_sql_tblname_rtcw $order $chan $game $limit $command
 
 }
@@ -162,14 +161,14 @@ proc funwar_et { nick host hand chan arg } {
 	global funwar_sql_password
 	global funwar_sql_dbname_et
 	global funwar_sql_tblname_et
-	
+
 	set order "id"
 	set game "ET"
 	set limit "10"
 	set command ""
-	
+
 	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_et $funwar_sql_tblname_et $order $chan $game $limit $command
-	
+
 }
 
 proc funwar_both { nick host hand chan arg } {
@@ -181,23 +180,23 @@ proc funwar_both { nick host hand chan arg } {
 	global funwar_sql_tblname_rtcw
 	global funwar_sql_dbname_et
 	global funwar_sql_tblname_et
-	
+
 	set order "id"
 	set game "RTCW"
 	set limit "3"
 	set command "nofooter"
-	
+
 	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_rtcw $funwar_sql_tblname_rtcw $order $chan $game $limit $command
-	
+
 	set game "ET"
 	set command "noheader"
-	
+
 	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_et $funwar_sql_tblname_et $order $chan $game $limit $command
-	
+
 }
 
 proc funwar_auto { min hour day month year } {
-	
+
 	global funwar_channels_auto
 	global funwar_sql_server
 	global funwar_sql_user
@@ -207,21 +206,20 @@ proc funwar_auto { min hour day month year } {
 	global funwar_sql_dbname_et
 	global funwar_sql_tblname_et
 	global funwar_channels_auto
-	
+
 	set order "id"
 	set game "RTCW"
 	set limit "3"
 	set command "nofooter"
-	
+
 	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_rtcw $funwar_sql_tblname_rtcw $order $funwar_channels_auto $game $limit $command
-	
+
 	set game "ET"
 	set command "noheader"
-	
-	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_et $funwar_sql_tblname_et $order $funwar_channels_auto $game $limit $command
-	
-}
 
+	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_et $funwar_sql_tblname_et $order $funwar_channels_auto $game $limit $command
+
+}
 
 bind pub - $funwar_trigger_et funwar_et
 bind pub - $funwar_trigger_rtcw funwar_rtcw

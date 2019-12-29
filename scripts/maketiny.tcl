@@ -18,14 +18,14 @@ if { [llength $argv] == 0 } {
 
 if ![catch {open $command r} input] {
 	while {[gets $input line] >= 0} {
-		
+
 		# regexp to extract the right part of the html file and the get the tiny url
 		# output tiny url
-		
+
 		if [regexp {<input type=hidden name=tinyurl value=\"(.*)\">} $line match tinyurl] {
 				puthelp "PRIVMSG $chan :$tinyurl"
 		}
-		
+
 	}
 	close $input
 }
@@ -44,7 +44,7 @@ proc tinyurl_tinylast {nick host hand chan argv} {
 
 proc tinyurl_urlhistory {nick host hand chan argv} {
 	set urlhistory "url_history_$chan"
-	
+
 	if {[regexp {(http://\S*)} $argv match url] != 0} {
 		if ![catch {open $urlhistory w} output] {
 			puts $output $url
