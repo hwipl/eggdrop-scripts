@@ -1,17 +1,53 @@
 # help.tcl
+#
+# This script shows a help text with the !help command.
+#
+# Usage:
+#       !help                   show help text
+#
+# Enable for a channel with:    .chanset #channel +help
+# Disable for a channel with:   .chanset #channel -help
 
-proc show_help { nick host hand chan arg } {
-	putserv "PRIVMSG $nick :*** command help: ***"
-	putserv "PRIVMSG $nick : Quake2 Server List Commands:"
-	putserv "PRIVMSG $nick :  !addserver ip:port  -   this adds a server to the server list"
-	putserv "PRIVMSG $nick :  !delserver number   -   this removes the server specified by number from the server list"
-	putserv "PRIVMSG $nick :  !serverlist         -   this shows all servers in the server list"
-	putserv "PRIVMSG $nick :  !refresh            -   this refreshes all servers in the server list"
-	putserv "PRIVMSG $nick :  !refresh number     -   this refreshes the server specified by number"
-	putserv "PRIVMSG $nick : Others:"
-	putserv "PRIVMSG $nick :  !help               -   you are viewing this right now ;)"
-	putserv "PRIVMSG $nick :  !insult name        -   this insults the user specified by name with a random insult"
-	putserv "PRIVMSG $nick :*** end of help ***"
+# tested versions, might run on earlier versions
+package require Tcl 8.6
+package require eggdrop 1.8.4
+
+namespace eval ::help {
+	# channel flag for enabling/disabling
+	setudef flag help
+
+	# help text
+	variable helpText {
+		"*** command help: ***"
+		" Quake2 Server List Commands:"
+		"  !addserver ip:port  - add server with ip:port to list"
+		"  !delserver number   - remove server with number from list"
+		"  !serverlist         - show servers in list"
+		"  !refresh            - refresh servers in list"
+		"  !refresh number     - refresh server with number in list"
+		" Others:"
+		"  !help               - show this help"
+		"  !insult user        - insult user with random insult"
+		"*** end of help ***"
+	}
 }
 
-bind pub - !help show_help
+proc ::help::show { nick host hand chan arg } {
+	variable helpText
+
+	# check channel flag if enabled in this channel
+	if {![channel get $chan help]} {
+		return 0
+	}
+
+	# send each line of help text as a message
+	foreach i $helpText {
+		puthelp "PRIVMSG $nick :$i"
+	}
+
+	return 1
+}
+
+namespace eval ::help {
+	bind pub - !help ::help::show
+}
