@@ -1,117 +1,172 @@
-###################################################################
-#
 # match.tcl
 #
 # This script was originally created to save clan matches in a file,
 # to show all the saved matches and to be able to remove them from
-# the file again.
+# the file again. But it could be used for storing, showing and
+# deleting arbitrary lines of text in a file.
 #
-# HOW TO USE THIS SCRIPT:
+# Usage:
+#       !addmatch match         add match to the file/list.
+#       !showmatch              show the saved matches.
+#       !delmatch number        remove match with number (as shown
+#                               by !showmatch) from the file/list.
+#                               The numbers of remaining matches
+#                               might change.
 #
-# !add_match      is used to add matches to the file/list.
-# !show_matches   is used to show the saved matches.
-# !del_match      is used to remove a match from the file/list.
-#                 You have to use the match number as an argument.
-#                 If you delte a match and there are more matches
-#                 after it in the list, all the remaining matches'
-#                 numbers will be decreased by 1.
+# The command names can be changed in the config section below.
 #
-# Of course, all those commands can be changed in the config
-# section below.
-#
-# CONFIG:
-#
-# Here you can change some global variables. You can change the
-# name and/or path of the file you want to store the matches in
-# and its backup file.
+# Enable for a channel with:    .chanset #channel +match
+# Disable for a channel with:   .chanset #channel -match
 
-set match_filename "matches.lst" ;#channel name will be appended to file
-set match_filenamebak "matches.lst.bak"
-set match_channels "#example #test" ;#USE LOWER CASE!
-# Here you can change the command names to something you like more.
+# tested versions, might run on earlier versions
+package require Tcl 8.6
+package require eggdrop 1.8.4
 
-set match_addcommand "!addmatch"
-set match_delcommand "!delmatch"
-set match_showcommand "!searchmatch"
+# Config:
+namespace eval ::match {
+	# channel flag for enabling/disabling
+	setudef flag match
 
-# END OF CONFIG
-####################################################################
+	# Name and/or path of the file you want to store the matches in and its
+	# backup file. Channel name will be prepended to file name
+	variable filename "matches.lst"
+	variable filenamebak "matches.lst.bak"
 
-global match_filename
-global match_filenamebak
-global match_channels
+	# Names of the commands for adding, deleting and showing
+	variable addcommand "!addmatch"
+	variable delcommand "!delmatch"
+	variable showcommand "!showmatch"
+}
+# End of Config
 
 # this procedure shows the saved matches:
-proc show_matches {nick host hand chan arg} {
-	global match_filename
-	global match_channels
-	if { [lsearch $match_channels [string tolower $chan]] != -1 } {
-	set file ${chan}.${match_filename}
-	if {[file exists $file]} {
-	if {[file size $file] > 0} {
-	if ![catch {open $file r} input] {
+proc ::match::show {nick host hand chan arg} {
+	variable filename
+
+	# check channel flag if enabled in this channel
+	if {![channel get $chan match]} {
+		return 0
+	}
+
+	# check if file exists and contains matches
+	set mfile ${chan}.${filename}
+	set nomatches "No matches found."
+	if {![file exists $mfile] || [file size $mfile] == 0} {
+		puthelp "PRIVMSG $chan :$nomatches"
+		return 0
+	}
+
+	# read all matches from file
+	if {[catch {open $mfile r} input]} {
+		puthelp "PRIVMSG $nick :Error opening file: $input"
+		return 0
+	}
 	while {[gets $input line] >= 0} {
 		lappend matches $line
 	}
 	close $input
-	putserv "PRIVMSG $chan :*** MatchList ***"
+
+	# show each match as a message in the channel
+	puthelp "PRIVMSG $chan :*** Match List ***"
 	for { set i 0 } { $i < [llength $matches] } { incr i } {
-	putserv "PRIVMSG $chan :([expr $i +1])  [lindex $matches $i]"
-#	putlog "match.tcl: $nick@$chan attempted to view match list"
+		puthelp "PRIVMSG $chan :([expr $i +1])  [lindex $matches $i]"
 	}
-	putserv "PRIVMSG $chan :*** End of MatchList ***"
-	} else { putserv "PRIVMSG $nick :Error opening file: $input" }
-	} else { putserv "PRIVMSG $chan :No matches have been added yet..."}
-	} else { putserv "PRIVMSG $chan :No matches have been added yet..."}
-	}
+	puthelp "PRIVMSG $chan :*** End of Match List ***"
+	return 1
 }
 
 # this procedure deletes saved matches:
-proc del_match {nick host hand chan arg} {
-	global match_filename
-	global match_filenamebak
-	global match_channels
-	if { [lsearch $match_channels [string tolower $chan]] != -1 } {
-	set file ${chan}.${match_filename}
-	set filebak ${chan}.${match_filenamebak}
-	if {[file exists $file]} {
-	if {[file size $file] > 0} {
-	if ![catch {open $file r} input] {
+proc ::match::del {nick host hand chan arg} {
+	variable filename
+	variable filenamebak
+
+	# check channel flag if enabled in this channel
+	if {![channel get $chan match]} {
+		return 0
+	}
+
+	# arg containing the match id must be present
+	if {$arg == ""} {
+		return 0
+	}
+
+	# check if file exists and contains matches
+	set mfile ${chan}.${filename}
+	set mfilebak ${chan}.${filenamebak}
+	set noexist "Match does not exist."
+	if {![file exists $mfile] || [file size $mfile] == 0} {
+		puthelp "PRIVMSG $nick :$noexist"
+		return 0
+	}
+
+	# read all matches from file
+	if {[catch {open $mfile r} input]} {
+		puthelp "PRIVMSG $nick :Error opening file: $input"
+		return 0
+	}
 	while {[gets $input line] >= 0} {
 		lappend matches $line
 	}
 	close $input
-	file copy -force $file $filebak
-	if ![catch {open $file w} output] {
+
+	# backup matches file
+	file copy -force $mfile $mfilebak
+
+	# write matches back to file
+	if {[catch {open $mfile w} output]} {
+		putshelp "PRIVMSG $nick :Error opening file: $output"
+		return 0
+	}
+	set deleted 0
 	for { set i 0 } { $i < [llength $matches] } { incr i } {
-	if {[expr $i +1] != $arg} { puts $output "[lindex $matches $i]" }
+		# omit the match that should be deleted
+		if {[expr $i +1] == $arg} {
+			set deleted 1
+			continue
+		}
+		puts $output "[lindex $matches $i]"
 	}
 	close $output
-	putserv "NOTICE $nick :Match number $arg is now deleted."
-	putlog "match.tcl: $nick@$chan attempted to delete match number $arg."
-	} else { putserv "PRIVMSG $nick :Error opening file: $input" }
-	} else { putserv "PRIVMSG $nick :Error opening file: $input" }
-	} else { putserv "PRIVMSG $nick :Can't delete matches that don't exist..." }
-	} else { putserv "PRIVMSG $nick :Can't delete matches that don't exist..." }
+
+	# send result back to caller
+	if {$deleted == 0} {
+		puthelp "PRIVMSG $nick :$noexist"
+		return 0
 	}
+	puthelp "NOTICE $nick :Match number $arg deleted."
+	return 1
 }
 
 # this procedure adds matches to the list:
-proc add_match {nick host hand chan arg} {
-	global match_filename
-	global match_channels
-	if { [lsearch $match_channels [string tolower $chan]] != -1 } {
-	set file ${chan}.${match_filename}
-	if ![catch {open $file a} output] {
+proc ::match::add {nick host hand chan arg} {
+	variable filename
+
+	# check channel flag if enabled in this channel
+	if {![channel get $chan match]} {
+		return 0
+	}
+
+	# arg containing the match must be present
+	if {$arg == ""} {
+		return 0
+	}
+
+	# write match to file
+	set mfile ${chan}.${filename}
+	if {[catch {open $mfile a} output]} {
+		puthelp "PRIVMSG $nick :Error opening file: $output"
+		return 0
+	}
 	puts $output "$nick:  $arg"
 	close $output
-	putserv "NOTICE $nick :Congrats, your Match has been added."
-	putlog "match.tcl: $nick@$chan attempted to add a match to the list"
-	} else { putserv "PRIVMSG $nick :Error opening file: $input" }
-	}
+
+	puthelp "NOTICE $nick :Match added."
+	return 1
 }
 
-# binds to call the procedures:
-bind pub - $match_showcommand show_matches
-bind pub - $match_addcommand add_match
-bind pub o|o $match_delcommand del_match
+namespace eval ::match {
+	bind pub - $showcommand ::match::show
+	bind pub - $addcommand ::match::add
+	# bind pub o|o $delcommand ::match::del
+	bind pub - $delcommand ::match::del
+}
