@@ -1,202 +1,319 @@
-###################################################################
-#
 # qstat.tcl
 #
-# CONFIG:
+# This script stores game servers in a server list file and queries their
+# status with the utility "qstat" with the server commands below.
 #
-# Here you can change some global variables. You can change the
-# name and/or path of the file you want to store the servers in
-# and its backup file.
+# Usage:
+#       !addserver server       add server to server list
+#       !delserver server       remove server from server list
+#       !serverlist             show servers in server list
+#       !refresh                query status of servers in server list
+#
+# Enable for a channel with:    .chanset #channel +qstat
+# Disable for a channel with:   .chanset #channel -qstat
 
-set qstat "/path/to/qstat"		;#path to your qstat binary
-set optionsall "-u -default q2s"	;#qstat options for all servers
-set optionssingle "-P -u -q2s"		;#qstat options for single server
+# tested versions, might run on earlier versions
+package require Tcl 8.6
+package require eggdrop 1.8.4
 
-set file "servers.lst"			;#file to store servers in
-set filebak "servers.lst.bak"		;#server backup file
+namespace eval ::qstat {
+	# channel flag for enabling/disabling
+	setudef flag qstat
 
-# Here you can change the command names to something you like more.
+	# command names
+	variable addcommand "!addserver"
+	variable delcommand "!delserver"
+	variable showcommand "!serverlist"
+	variable refreshcommand "!refresh"
 
-set addcommand "!addserver"		;#add server to the list
-set delcommand "!delserver"		;#remove server from list
-set showcommand "!serverlist"		;#show servers in list (no qstat)
-set refreshcommand "!refresh"		;#show server stats (qstat)
+	# path to your qstat binary
+	variable qstat "/usr/local/bin/qstat"
 
-# END OF CONFIG
-####################################################################
+	# qstat options for querying all servers
+	variable optionsall "-nh -u -default q2s"
 
-global file
-global filebak
-global qstat
-global optionsall
-global optionssingle
+	# qstat options for querying single server
+	variable optionssingle "-nh -P -sort F -u -q2s"
 
-set playerlist1 ""
-global playerlist1
-
-# this procedure shows the saved matches:
-proc show_matches {nick host hand chan arg} {
-	global file
-	if {[isop $nick $chan]} {
-	if {[file exists $file]} {
-	if {[file size $file] > 0} {
-	if ![catch {open $file r} input] {
-	while {[gets $input line] >= 0} {
-		lappend matches $line
-	}
-	close $input
-	puthelp "PRIVMSG $nick :*** Server List ***:"
-	for { set i 0 } { $i < [llength $matches] } { incr i } {
-	puthelp "PRIVMSG $nick :([expr $i +1])  [lindex $matches $i]"
-	}
-	} else { puthelp "NOTICE $nick :Error opening file: $input" }
-	} else { puthelp "PRIVMSG $nick :No servers have been added yet..."}
-	} else { puthelp "PRIVMSG $nick :No servers have been added yet..."}
-	}
+	# file to store servers in and its backup file
+	variable file "servers.lst"
+	variable filebak "servers.lst.bak"
 }
 
-# this procedure deletes saved matches:
-proc del_match {nick host hand chan arg} {
-	global file
-	global filebak
-	if {[isop $nick $chan]} {
-	if {[file exists $file]} {
-	if {[file size $file] > 0} {
-	if ![catch {open $file r} input] {
-	while {[gets $input line] >= 0} {
-		lappend matches $line
+# read server list from server file
+proc ::qstat::fileGet {} {
+	variable file
+
+	# check is server list entries exist
+	if {![file exists $file] || [file size $file] == 0} {
+		return ""
 	}
-	if {$arg <= [llength $matches] && $arg != 0} {
+
+	# read servers from server file
+	set servers ""
+	if {[catch {open $file r} input]} {
+		return ""
+	}
+	while {[gets $input line] >= 0} {
+		lappend servers $line
+	}
 	close $input
+
+	return $servers
+}
+
+# this procedure shows the saved servers:
+proc ::qstat::showServers {nick host hand chan arg} {
+	# check channel flag if enabled in this channel
+	if {![channel get $chan qstat]} {
+		return 0
+	}
+
+	# nick must be op
+	if {![isop $nick $chan]} {
+		return 0
+	}
+
+	# read servers from server file
+	set servers [fileGet]
+	if {$servers == ""} {
+		puthelp "PRIVMSG $nick :No servers in server list."
+		return 0
+	}
+
+	# send each server as a separate message
+	puthelp "PRIVMSG $nick :*** Server List ***:"
+	set i 1
+	foreach s $servers {
+		puthelp "PRIVMSG $nick :($i)  $s"
+		incr i
+	}
+
+	return 1
+}
+
+# this procedure deletes saved servers:
+proc ::qstat::delServer {nick host hand chan arg} {
+	variable file
+	variable filebak
+
+	# check channel flag if enabled in this channel
+	if {![channel get $chan qstat]} {
+		return 0
+	}
+
+	# nick must be op
+	if {![isop $nick $chan]} {
+		return 0
+	}
+
+	# read servers from server file
+	set servers [fileGet]
+
+	# check if argument contains a valid server number
+	if {$arg == "" || $arg > [llength $servers] || $arg == 0} {
+		puthelp "NOTICE $nick :Invalid server number."
+		return 0
+	}
+
+	# backup server file
 	file copy -force $file $filebak
-	if ![catch {open $file w} output] {
-	for { set i 0 } { $i < [llength $matches] } { incr i } {
-	if {[expr $i +1] != $arg} { puts $output "[lindex $matches $i]" }
+
+	# write servers to server file, omitting deleted server
+	if {[catch {open $file w} output]} {
+		puthelp "NOTICE $nick :Error opening file: $output"
+		putlog "match.tcl: ERROR! Error opening file: $output"
+		return 0
+	}
+	set i 1
+	foreach s $servers {
+		if {$i != $arg} {
+			puts $output $s
+		}
+		incr i
 	}
 	close $output
+
 	puthelp "NOTICE $nick :Attempted to delete server number $arg."
 	putlog "match.tcl: $nick@$chan attempted to delete server number $arg."
-	} else { puthelp "NOTICE $nick :Error opening file: $output"
-		 putlog "match.tcl: ERROR! Error opening file: $output"}
-	} else { puthelp "NOTICE $nick :Can't delete servers that don't exist..." }
-	} else { puthelp "NOTICE $nick :Error opening file: $input"
-		 putlog "match.tcl: ERROR! Error opening file: $input"}
-	} else { puthelp "NOTICE $nick :Can't delete servers that don't exist..." }
-	} else { puthelp "NOTICE $nick :Can't delete servers that don't exist..." }
-	}
+	return 1
 }
 
 # this procedure adds matches to the list:
-proc add_match {nick host hand chan arg} {
-	global file
-	if {[isop $nick $chan]} {
-	if { $arg != "" } {
+proc ::qstat::addServer {nick host hand chan arg} {
+	variable file
 
+	# check channel flag if enabled in this channel
+	if {![channel get $chan qstat]} {
+		return 0
+	}
+
+	# nick must be op
+	if {![isop $nick $chan]} {
+		return 0
+	}
+
+	# check if arg contains valid ip and port
+	if { $arg == "" } {
+		puthelp "NOTICE $nick :Can't add empty entry"
+		return 0
+	}
+	# NOTE: this only checks ipv4 addresses
         set match [regexp {[\d]+.[\d]+.[\d]+.[\d]+:[\d]+} $arg matchl]
-	if { $match == 1 } {
+	if { $match != 1 } {
+		return 0
+	}
 
-	if ![catch {open $file a} output] {
+	# append server to server file
+	if {[catch {open $file a} output]} {
+		puthelp "NOTICE $nick :Error opening file: $output"
+		putlog "match.tcl: ERROR! Error opening file: $output"
+		return 0
+	}
 	puts $output "$arg"
 	close $output
+
 	puthelp "NOTICE $nick :Attempted to add server."
 	putlog "match.tcl: $nick@$chan attempted to add a server to the list"
-	} else { puthelp "NOTICE $nick :Error opening file: $output"
-		 putlog "match.tcl: ERROR! Error opening file: $output"}
+	return 1
+}
+
+# format a server info line
+proc ::qstat::formatServerLine {line servers} {
+	# check if line is a server line and parse it
+	set pattern {(?x)
+		# server address + whitespace
+		([\d]+.[\d]+.[\d]+.[\d]+:[\d]+)[\s]+
+		# players cur/max + whitespace
+		([\d]+/[\d]+)[\s]+
+		# spectators cur/max + whitespace
+		([\d]+/[\d]+)[\s]+
+		# map + whitespace
+		([\w]+)[\s]+
+		# ping, retries + whitespace
+		([\d]+)[\s]*/[\s]*[\d]+[\s]+
+		# server name
+		(.+)
 	}
-	} else { puthelp "NOTICE $nick :Can't add empty entry" }
+	if {[regexp $pattern $line matchln address players spectators \
+		map ping name] != 1} {
+		return ""
 	}
+
+	# format the output
+	set number [expr {[lsearch $servers $address] +1}]
+	set fmt "%s \0030,1\00307%-21s \00315%-45s \0034%-7s \00315%-10s"
+	return [format $fmt ($number) $address $name ($players) ($map)]
+}
+
+# format a player info line
+proc ::qstat::formatPlayerLine {line} {
+	# check if line is a player line and parse it
+	set pattern {(?x)
+		# frags
+		[\s]*(-*[\d]+)[\s]*frags
+		# ping
+		[\s]*([\d]+)ms
+		# player name
+		[\s]*(.+)
+	}
+	if {[regexp $pattern $line matchln playerfrags playerping \
+		playername] != 1} {
+		return ""
+	}
+
+	# format the output
+	set p "\0030,1\00307$playername \00315(${playerfrags} frags, "
+	set p "$p\00304${playerping}ms)"
+	return $p
 }
 
 
-proc refresh_servers {nick host hand chan arg} {
-	global qstat
-	global file
-	global playerlist1
-	global optionsall
-	global optionssingle
+# query all servers in server list with qstat
+proc ::qstat::refreshAll {nick chan servers} {
+	variable file
+	variable qstat
+	variable optionsall
 
-	if { $arg == "" } {
-
-	if {[file exists $file]} {
-
-	if {[file size $file] > 0} {
-
-	if ![catch {open $file r} input] {
+	# run qstat and parse output
+	if {[catch {open "|$qstat $optionsall -f $file" r} input]} {
+		puthelp "PRIVMSG $nick :Error refreshing servers: $input"
+		return 0
+	}
 	while {[gets $input line] >= 0} {
-	lappend matches $line
-	}
-	close $input
-	}
-
-	if ![catch {open "|$qstat $optionsall -f $file" r} input] {
-
-	while {[gets $input line] >= 0} {
-	formatline $line $chan $matches
-	}
-
-	close $input
-	} else { puthelp "PRIVMSG $nick :Error refreshing servers: $input " }
-	} else { puthelp "PRIVMSG $nick :No servers have been added yet..." }
-	} else { puthelp "PRIVMSG $nick :No servers have been added yet..." }
-
-	} else {
-
-	set playerlist1 ""
-	if {[file exists $file]} {
-	if {[file size $file] > 0} {
-	if ![catch {open $file r} input] {
-	while {[gets $input line] >= 0} {
-	lappend matches $line
-	}
-	close $input
-	}
-        if ![catch {open "|$qstat $optionssingle [lindex $matches [expr $arg -1]]" r} input] {
-	while {[gets $input line] >= 0} {
-	formatone $line $chan $arg
-	}
-	if { $playerlist1 != "" } { puthelp "PRIVMSG $chan :$playerlist1" }
-	close $input
-	} else { puthelp "NOTICE $nick :Error opening file: $input" }
-	} else { puthelp "PRIVMSG $chan :No servers have been added yet..."}
-	} else { puthelp "PRIVMSG $chan :No servers have been added yet..."}
-
-	}
-}
-
-proc formatline { line chan matches } {
-	set match [regexp {([\d]+.[\d]+.[\d]+.[\d]+:[\d]+)\
-                   [\s]*([\d]+/[\d]+)[\s]*\
-		   ([\w]+)[\s]*([\d]+)[\s]*/[\s]*[\d]+\
-		   [\s]*([\w]+)[\s]*(.+)} $line matchln address players map ping type name]
-	#puthelp "PRIVMSG $chan :$match"
-
-	if { $match == 1 } {
-	set number [expr [lsearch $matches $address] +1]
-	puthelp "PRIVMSG $chan :($number) \0030,1\00307[format "%-21s " $address] \00315[format "%-45s " $name] \0034[format "%-7s " ($players)] \00315[format "%-10s " ($map)]"}
-}
-
-proc formatone { line chan arg } {
-	global playerlist1
-        set match [regexp {([\d]+.[\d]+.[\d]+.[\d]+:[\d]+)\
-	                   [\s]*([\d]+/[\d]+)[\s]*\
-			   ([\w]+)[\s]*([\d]+)[\s]*/[\s]*[\d]+\
-			   [\s]*([\w]+)[\s]*(.+)} $line matchln address players map ping type name]
-	#puthelp "PRIVMSG $chan :$match"
-        if { $match == 1 } {
-	puthelp "PRIVMSG $chan :($arg) \0030,1\00307[format "%-21s " $address] \00315[format "%-45s " $name] \0034[format "%-7s " ($players)] \00315[format "%-10s " ($map)]"
-	} else {
-	set match2 [regexp {[\s]*(-*[\d]+)[\s]*frags[\s]*([\d]+)ms[\s]*(.+)} $line matchln2 playerfrags playerping playername]
-		if { $match2 == 1 } {
-			if { $playerlist1 != "" } {
-			set playerlist1 "${playerlist1}, \00307$playername \00315(${playerfrags} frags, \00304${playerping}ms)"
-			} else { set playerlist1 "\0030,1\00307$playername \00315(${playerfrags} frags, \00304${playerping}ms)"
-			}
+		# show each server line in the channel
+		set result [formatServerLine $line $servers]
+		if {$result != ""} {
+			puthelp "PRIVMSG $chan :$result"
 		}
 	}
+	close $input
 }
 
-# binds to call the procedures:
-bind pub - $showcommand show_matches
-bind pub - $addcommand add_match
-bind pub - $delcommand del_match
-bind pub - $refreshcommand refresh_servers
+# query a single server with qstat
+proc ::qstat::refreshSingle {nick chan servers server} {
+	variable qstat
+	variable optionssingle
+
+	# run qstat and parse output
+	set playerlist ""
+        if {[catch {open "|$qstat $optionssingle $server" r} input]} {
+		puthelp "NOTICE $nick :Error refreshing server: $input"
+		return 0
+	}
+	while {[gets $input line] >= 0} {
+		# show each server line in the channel
+		set result [formatServerLine $line $servers]
+		if {$result != ""} {
+			puthelp "PRIVMSG $chan :$result"
+		}
+
+		# look for players and add them to player list
+		set result [formatPlayerLine $line]
+		if {$result != ""} {
+			lappend playerlist $result
+		}
+	}
+	close $input
+
+	# show the player list in the channel
+	if {$playerlist != ""} {
+		set players [join $playerlist ", "]
+		puthelp "PRIVMSG $chan :$players"
+	}
+}
+
+# query servers with qstat
+proc ::qstat::refreshServers {nick host hand chan arg} {
+	# check channel flag if enabled in this channel
+	if {![channel get $chan qstat]} {
+		return 0
+	}
+
+	# read servers from server file
+	set servers [fileGet]
+	if {$servers == ""} {
+		puthelp "PRIVMSG $nick :No servers in server list."
+		return 0
+	}
+
+	if {$arg == ""} {
+		# no extra parameters, refresh all servers
+		refreshAll $nick $chan $servers
+	} else {
+		# only refresh server specified in arg
+		set server [lindex $servers [expr {$arg -1}]]
+		if {$server == ""} {
+			puthelp "PRIVMSG $nick :Server not found."
+			return 0
+		}
+		refreshSingle $nick $chan $servers $server
+	}
+}
+
+namespace eval ::qstat {
+	bind pub - $showcommand ::qstat::showServers
+	bind pub - $addcommand ::qstat::addServer
+	bind pub - $delcommand ::qstat::delServer
+	bind pub - $refreshcommand ::qstat::refreshServers
+}
