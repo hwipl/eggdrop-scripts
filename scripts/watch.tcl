@@ -287,4 +287,5 @@ proc ::watch::periodic {minute hour day month weekday} {
 namespace eval ::watch {
 	bind pub - !watch ::watch::watchNick
 	bind cron - "*/1 * * * *" ::watch::periodic
+	putlog "Loaded watch.tcl"
 }

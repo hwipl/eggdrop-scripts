@@ -316,4 +316,5 @@ namespace eval ::qstat {
 	bind pub - $addcommand ::qstat::addServer
 	bind pub - $delcommand ::qstat::delServer
 	bind pub - $refreshcommand ::qstat::refreshServers
+	putlog "Loaded qstat.tcl"
 }

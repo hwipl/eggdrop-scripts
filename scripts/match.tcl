@@ -169,4 +169,5 @@ namespace eval ::match {
 	bind pub - $addcommand ::match::add
 	# bind pub o|o $delcommand ::match::del
 	bind pub - $delcommand ::match::del
+	putlog "Loaded match.tcl"
 }

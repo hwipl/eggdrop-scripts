@@ -78,4 +78,5 @@ namespace eval ::topic {
 	bind pub - !off ::topic::setOffTopic
 	bind pub - !on ::topic::setOnTopic
 	bind pub - !topic ::topic::setTopic
+	putlog "Loaded topic.tcl"
 }

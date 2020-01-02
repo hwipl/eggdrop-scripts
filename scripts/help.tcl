@@ -50,4 +50,5 @@ proc ::help::show { nick host hand chan arg } {
 
 namespace eval ::help {
 	bind pub - !help ::help::show
+	putlog "Loaded help.tcl"
 }

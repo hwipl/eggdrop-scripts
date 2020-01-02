@@ -113,4 +113,5 @@ namespace eval ::maketiny {
 	bind pub - !tinyurl ::maketiny::tinyurl
 	bind pub - !tinylast ::maketiny::tinylast
 	bind pubm - * ::maketiny::lasturl
+	putlog "Loaded maketiny.tcl"
 }
