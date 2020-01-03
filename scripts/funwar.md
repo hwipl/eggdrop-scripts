@@ -1,6 +1,25 @@
 # funwar.tcl
 
+This script was created to post fun clan wars/matches for the two multiplayer
+games RTCW and ET in channels periodically and with the commands below. The
+matches are retrieved from tables in postreSQL databases.
+
+```
+Usage:
+      !et                     post ET matches
+      !rtcw                   post RTCW matches
+      !funwars                post ET and RTCW matches
+
+Enable for a channel with:    .chanset #channel +funwar
+Disable for a channel with:   .chanset #channel -funwar
+```
+
 ## Setup
+
+The script requires a PostgreSQL server. So, this section shows an example of
+how to setup the SQL server, eggdrop, and this script using docker containers.
+
+### PostgreSQL
 
 Run a new postgres container for eggdrop and set the password of the "postgres"
 superuser:
@@ -77,7 +96,58 @@ Disconnect user "eggdrop" from postgres:
 \q
 ```
 
-### Examples
+### Eggdrop
+
+The script uses the `tdbc::postgres` database connector. This connector
+requires the `libpq` library that is not installed in the official eggdrop
+docker image. So, you need to install it in the container. One way is shown in
+the following steps:
+
+The steps assume that you have an eggdrop container running, e.g., with a
+command line similar to the following one:
+
+```console
+$ docker run -ti -e NICK=FooBot -e SERVER=172.17.0.2 \
+	-v ~/eggdrop/data:/home/eggdrop/eggdrop/data \
+	-v ~/eggdrop/custom-scripts:/home/eggdrop/eggdrop/custom-scripts \
+	eggdrop
+```
+
+Get the ID of your running eggdrop container using `docker ps`, e.g.,
+`abc123def456`. Then, attach to the running eggdrop container and run the bash
+shell in it:
+
+```console
+$ docker exec -ti abc123def456 bash
+```
+
+Inside the shell session, install `libpq`:
+
+```console
+$ apk add libpq
+```
+
+Close the shell session, e.g., with `exit`. Then, commit your changes to a new
+image called `eggdrop-custom`:
+
+```
+$ docker commit abc123def456 eggdrop-custom
+```
+
+After this, you can shut down your eggdrop container and restart it using the
+new image, e.g., with a command line similar to the following one:
+
+```console
+$ docker run -ti -e NICK=FooBot -e SERVER=172.17.0.2 \
+	-v ~/eggdrop/data:/home/eggdrop/eggdrop/data \
+        -v ~/eggdrop/custom-scripts:/home/eggdrop/eggdrop/custom-scripts \
+	eggdrop-custom
+```
+
+## Examples
+
+This section shows examples of the output of the script in a channel. Note: the
+same database and table was used for both games in these examples.
 
 Example of periodic posting:
 
