@@ -1,228 +1,257 @@
-#!/usr/bin/tclsh
-# funwar script
-# have fun ;)
+# funwar.tcl
+#
+# This script was created to post fun clan wars/matches for the two multiplayer
+# games RTCW and ET in channels periodically and with the commands below. The
+# matches are retrieved from tables in postreSQL databases.
+#
+# Usage:
+#       !et                     post ET matches
+#       !rtcw                   post RTCW matches
+#       !funwars                post ET and RTCW matches
+#
+# Enable for a channel with:    .chanset #channel +funwar
+# Disable for a channel with:   .chanset #channel -funwar
 
-package require sql
+# tested versions, might run on earlier versions
+package require Tcl 8.6
+package require eggdrop 1.8.4
 
-# sql stuff:
-set funwar_sql_server "server.ip.add.ress"
-set funwar_sql_user "username"
-set funwar_sql_password "password"
-set funwar_sql_dbname_et "name of database"
-set funwar_sql_dbname_rtcw "name of database"
-set funwar_sql_tblname_et "name of table"
-set funwar_sql_tblname_rtcw "name of table"
+# postgres sql
+package require tdbc::postgres
 
-# where the bot should post funwars automatically:
-set funwar_channels_auto "#example #test"
+namespace eval ::funwar {
+	# channel flag for enabling/disabling
+	setudef flag funwar
 
-# how often should funwars be posted in the above specified channels?
-# bind time - "MIN HOUR DAY MONTH YEAR" funwar_auto
-# for example:
-# bind time - "20 * * * *" funwar auto
-# bind time - "50 * * * *" funwar auto
-# (posts at 20 and 50 minutes every hour/day/month/year)
+	# sql server settings:
+	variable sqlServer "server.ip.add.ress"
+	variable sqlUser "username"
+	variable sqlPassword "password"
 
-bind time - "20 * * * *" funwar_auto
-bind time - "50 * * * *" funwar_auto
+	# ET database and table on sql server
+	variable sqlDbnameEt "name of database"
+	variable sqlTblnameEt "name of table"
 
-# which triggers should be used?
-set funwar_trigger_et "!et"
-set funwar_trigger_rtcw "!rtcw"
-set funwar_trigger_both "!funwars"
+	# RTCW database and table on sql server
+	variable sqlDbnameRtcw "name of database"
+	variable sqlTblnameRtcw "name of table"
 
-# what should the output look like?
+	# crontab style definition of how often funwars are posted in channels
+	# format:
+	#       "MIN HOUR DAY MONTH YEAR"
+	# examples:
+	#       "20,50 * * * *"         post at minute 20 and 50 of every hour
+	#       "*/10 * * * *"          post every ten minutes
+	variable autoCron "20,50 * * * *"
 
-set funwar_output_header "*** Funwars: ***"
-set funwar_output_header2 "Game: Date/Time: XonX: Clantag: IRC:"
-set funwar_output_footer "*** end of funwars list ***"
+	# trigger configuration for ET, RTCW and both
+	variable triggerEt "!et"
+	variable triggerRtcw "!rtcw"
+	variable triggerBoth "!funwars"
 
-
-#<don´t change>
-proc funwar_post {game id date time xonx clantag irc www server org chan } {
-#</don´t change>
-
-set funwar_output_body "$game $date $xonx $clantag $irc"
-
-
-#<don´t change>
-puthelp "PRIVMSG $chan :$funwar_output_body"
-}
-#</don´t change>
-
-
-# you shouldn´t change anything below except your really want to modify something!!!
-
-global funwar_sql_server
-global funwar_sql_user
-global funwar_sql_passwd
-global funwar_sql_dbname_et
-global funwar_sql_dbname_rtcw
-global funwar_sql_tblname_et
-global funwar_sql_tblname_rtcw
-global funwar_output_header
-global funwar_output_header2
-global funwar_output_footer
-global funwar_channels_auto
-
-
-
-proc funwar_sql_parsedb { server user password dbname tblname order chan game limit command} {
-
-global funwar_output_header
-global funwar_output_header2
-global funwar_output_footer
-
-set counter "1"
-
-set conn [ sql connect $server $user $password ]
-set res [ catch { sql selectdb $conn $dbname } msg ]
-if { $res != 0 } {
-	puthelp "PRIVMSG $chan :Sorry, could not select the database '$dbname': $msg"
+	# output configuration
+	variable outputHeader "*** Funwars: ***"
+	variable outputHeader2 "Game: Date/Time: XonX: Clantag: IRC:"
+	variable outputFooter "*** end of funwars list ***"
 }
 
-set res [ sql query $conn "select id,date,time,xonx,clantag,irc,www,server,org from $tblname order by $order desc" ]
-if { $res != 0 } {
+# post the funwar header in the channel
+proc ::funwar::postHeader {chan} {
+	variable outputHeader
+	variable outputHeader2
+	set fmt "%-7s %-20s %-6s %-12s %-12s"
+	set lineHeader [format $fmt {*}$outputHeader2]
 
-if { $command != "noheader" } {
-	if { [llength $chan] == 1 } {
-	puthelp "PRIVMSG $chan :$funwar_output_header"
-	puthelp "PRIVMSG $chan :$funwar_output_header2"
-	} else {
-	foreach channel $chan {
-		puthelp "PRIVMSG $channel :$funwar_output_header"
-		puthelp "PRIVMSG $channel :$funwar_output_header2"
+	puthelp "PRIVMSG $chan :$outputHeader"
+	puthelp "PRIVMSG $chan :$lineHeader"
+}
+
+# post a funwar line in the channel
+proc ::funwar::post {game id date time xonx clantag irc www server org chan } {
+	set fmt "%-7s %-20s %-6s %-12s %-12s"
+	set outputBody [format $fmt $game $date/$time $xonx $clantag $irc]
+
+	puthelp "PRIVMSG $chan :$outputBody"
+}
+
+# post the funwar footer in the channel
+proc ::funwar::postFooter {chan} {
+	variable outputFooter
+
+	puthelp "PRIVMSG $chan :$outputFooter"
+}
+
+# get rows from sql table
+proc ::funwar::sqlGet {server user password dbname tblname order limit} {
+	# connect to data base
+	# add -sslmode require if you want to enforce ssl
+	tdbc::postgres::connection create db -host $server -database $dbname \
+		-user $user -password $password
+
+	# query table in data base
+	set columns "id,date,time,xonx,clantag,irc,www,server,org"
+	set top "FETCH FIRST $limit ROWS ONLY"
+	set queryStr "SELECT $columns FROM $tblname ORDER BY $order DESC $top"
+	set query [db prepare $queryStr]
+
+	# collect all rows and return them
+	set rows ""
+	$query foreach row {
+		lappend rows $row
 	}
-	}
+	$query close
+	db close
+
+	return $rows
 }
 
-while { [ set row [ sql fetchrow $conn ] ] != "" } {
-	set id [lindex $row 0]
-	set date [lindex $row 1]
-	set time [lindex $row 2]
-	set xonx [lindex $row 3]
-	set clantag [lindex $row 4]
-	set irc [lindex $row 5]
-	set www [lindex $row 6]
-	set server [lindex $row 7]
-	set org [lindex $row 8]
+# query db, parse everything and post in channels
+proc ::funwar::sqlParsedb {server user password dbname tblname order chan \
+	game limit command} {
+	# query rows from table in database
+	set rows [sqlGet $server $user $password $dbname $tblname $order \
+		$limit]
+	if {$rows == ""} {
+		return
+	}
 
-	if { $counter <= $limit } {
-	if { [llength $chan] == 1 } {
-		funwar_post $game $id $date $time $xonx $clantag $irc $www $server $org $chan
-	} else {
+	if { $command != "noheader" } {
+		# post header in every given channel
 		foreach channel $chan {
-		funwar_post $game $id $date $time $xonx $clantag $irc $www $server $org $channel
+			postHeader $channel
 		}
 	}
+
+	# parse earch row and post them in channels
+	foreach row $rows {
+		set id [dict get $row id]
+		set date [dict get $row date]
+		set time [dict get $row time]
+		set xonx [dict get $row xonx]
+		set clantag [dict get $row clantag]
+		set irc [dict get $row irc]
+		set www [dict get $row www]
+		set server [dict get $row server]
+		set org [dict get $row org]
+
+		foreach channel $chan {
+			# post row in every given channel
+			post $game $id $date $time $xonx $clantag $irc $www \
+				$server $org $channel
+		}
 	}
-	incr counter
-}
 
-if { $command != "nofooter" } {
-if { [llength $chan] == 1 } {
-	puthelp "PRIVMSG $chan :$funwar_output_footer"
-} else {
-	foreach channel $chan {
-		puthelp "PRIVMSG $channel :$funwar_output_footer"
+	if { $command != "nofooter" } {
+		# post footer in every given channel
+		foreach channel $chan {
+			postFooter $channel
+		}
 	}
 }
-}
 
-}
-sql endquery $conn
-sql disconnect $conn
-
-
-}
-
-
-proc funwar_rtcw { nick host hand chan arg } {
-
-	global funwar_sql_server
-	global funwar_sql_user
-	global funwar_sql_password
-	global funwar_sql_dbname_rtcw
-	global funwar_sql_tblname_rtcw
+# helper for posting rtcw entries
+proc ::funwar::postRtcw {chan limit command} {
+	variable sqlServer
+	variable sqlUser
+	variable sqlPassword
+	variable sqlDbnameRtcw
+	variable sqlTblnameRtcw
 
 	set order "id"
 	set game "RTCW"
+
+	sqlParsedb $sqlServer $sqlUser $sqlPassword $sqlDbnameRtcw \
+		$sqlTblnameRtcw $order $chan $game $limit $command
+}
+
+# helper for posting et entries
+proc ::funwar::postEt {chan limit command} {
+	variable sqlServer
+	variable sqlUser
+	variable sqlPassword
+	variable sqlDbnameEt
+	variable sqlTblnameEt
+
+	set order "id"
+	set game "ET"
+
+	sqlParsedb $sqlServer $sqlUser $sqlPassword $sqlDbnameEt \
+		$sqlTblnameEt $order $chan $game $limit $command
+}
+
+# handle the !rtcw trigger
+proc ::funwar::rtcw { nick host hand chan arg } {
+	# check channel flag if enabled in this channel
+	if {![channel get $chan funwar]} {
+		return 0
+	}
+
 	set limit "10"
 	set command ""
+	postRtcw $chan $limit $command
 
-	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_rtcw $funwar_sql_tblname_rtcw $order $chan $game $limit $command
-
+	return 1
 }
 
-proc funwar_et { nick host hand chan arg } {
+# handle the !et trigger
+proc ::funwar::et { nick host hand chan arg } {
+	# check channel flag if enabled in this channel
+	if {![channel get $chan funwar]} {
+		return 0
+	}
 
-	global funwar_sql_server
-	global funwar_sql_user
-	global funwar_sql_password
-	global funwar_sql_dbname_et
-	global funwar_sql_tblname_et
-
-	set order "id"
-	set game "ET"
 	set limit "10"
 	set command ""
+	postEt $chan $limit $command
 
-	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_et $funwar_sql_tblname_et $order $chan $game $limit $command
-
+	return 1
 }
 
-proc funwar_both { nick host hand chan arg } {
+# handle the !funwars trigger
+proc ::funwar::both { nick host hand chan arg } {
+	# check channel flag if enabled in this channel
+	if {![channel get $chan funwar]} {
+		return 0
+	}
 
-	global funwar_sql_server
-	global funwar_sql_user
-	global funwar_sql_password
-	global funwar_sql_dbname_rtcw
-	global funwar_sql_tblname_rtcw
-	global funwar_sql_dbname_et
-	global funwar_sql_tblname_et
-
-	set order "id"
-	set game "RTCW"
 	set limit "3"
 	set command "nofooter"
+	postRtcw $chan $limit $command
 
-	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_rtcw $funwar_sql_tblname_rtcw $order $chan $game $limit $command
-
-	set game "ET"
 	set command "noheader"
+	postEt $chan $limit $command
 
-	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_et $funwar_sql_tblname_et $order $chan $game $limit $command
-
+	return 1
 }
 
-proc funwar_auto { min hour day month year } {
+# handle cron auto posting
+proc ::funwar::auto { min hour day month year } {
+	# determine list of channels to post in based on channel flag
+	set autoChannels ""
+	foreach botChan [channels] {
+		# only use channels the bot is on and have the flag enabled
+		if {![botonchan $botChan] || ![channel get $botChan funwar]} {
+			continue
+		}
+		lappend autoChannels $botChan
+	}
+	if {$autoChannels == ""} {
+		# no channels to post in
+		return
+	}
 
-	global funwar_channels_auto
-	global funwar_sql_server
-	global funwar_sql_user
-	global funwar_sql_password
-	global funwar_sql_dbname_rtcw
-	global funwar_sql_tblname_rtcw
-	global funwar_sql_dbname_et
-	global funwar_sql_tblname_et
-	global funwar_channels_auto
-
-	set order "id"
-	set game "RTCW"
 	set limit "3"
 	set command "nofooter"
+	postRtcw $autoChannels $limit $command
 
-	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_rtcw $funwar_sql_tblname_rtcw $order $funwar_channels_auto $game $limit $command
-
-	set game "ET"
 	set command "noheader"
-
-	funwar_sql_parsedb $funwar_sql_server $funwar_sql_user $funwar_sql_password $funwar_sql_dbname_et $funwar_sql_tblname_et $order $funwar_channels_auto $game $limit $command
-
+	postEt $autoChannels $limit $command
 }
 
-bind pub - $funwar_trigger_et funwar_et
-bind pub - $funwar_trigger_rtcw funwar_rtcw
-bind pub - $funwar_trigger_both funwar_both
-
-putlog "Loaded funwars.tcl"
+namespace eval ::funwar {
+	bind pub - $triggerEt ::funwar::et
+	bind pub - $triggerRtcw ::funwar::rtcw
+	bind pub - $triggerBoth ::funwar::both
+	bind cron - $autoCron ::funwar::auto
+	putlog "Loaded funwars.tcl"
+}
