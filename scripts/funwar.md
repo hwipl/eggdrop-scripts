@@ -124,7 +124,14 @@ $ docker exec -ti abc123def456 bash
 Inside the shell session, install `libpq`:
 
 ```console
-$ apk add libpq
+# apk add libpq
+```
+
+Remove eggdrop's pid file, so we can commit the above changes to a new image
+without running into eggdrop issues when we start the new container image:
+
+```console
+# rm pid.FooBot
 ```
 
 Close the shell session, e.g., with `exit`. Then, commit your changes to a new
