@@ -43,9 +43,11 @@ one or run your own. The scripts were tested with the IRC server
 * InspIRCd 3.4.0
 
 The script `funwar.tcl` requires a [PostgreSQL](https://www.postgresql.org)
-server. The tested version is:
+server. Additionally, the script depends on the PostgreSQL library `libpq` to
+connect to the PostgreSQL server. The tested versions are:
 
 * PostgreSQL 12.1
+* libpq 12.1
 
 The script `qstat.tcl` requires the tool
 [qstat](https://github.com/multiplay/qstat). The tested version is:
