@@ -11,7 +11,7 @@ Overview:
 * [auth.tcl](scripts/auth.tcl): authenticate the bot with an authentication
   service when connecting to a server.
 * [beer.tcl](scripts/beer.tcl): give users in a channel a cold beverage.
-* [date.tcl](scripts/date.tcl): post the current date.
+* [date.tcl](scripts/date.tcl): post the current date and time.
 * [funwar.tcl](scripts/funwar.tcl): post scheduled online gaming fun matches
   retrieved from a SQL database.
 * [greetings.tcl](scripts/greetings.tcl): greet users that join a channel.
@@ -24,8 +24,8 @@ Overview:
   text file and post stored matches.
 * [qstat.tcl](scripts/qstat.tcl): query the status of online gaming servers
   with the tool "qstat" and post the result.
-* [topic.tcl](script/topic.tcl): change the topic of a channel.
-* [watch.tcl](script/watch.tcl): watch the online and offline status of users
+* [topic.tcl](scripts/topic.tcl): change the topic of a channel.
+* [watch.tcl](scripts/watch.tcl): watch the online and offline status of users
   and post status changes.
 
 ## Requirements
@@ -53,6 +53,6 @@ The script `qstat.tcl` requires the tool
 * qstat 2.15 (Pre-release: commit 85fbecb on Dec 1, 2018)
 
 The script `host.tcl` requires the tool "host" that is part of the
-[bind](https://www.isc.org/bind/) tools. The tested version is
+[bind](https://www.isc.org/bind/) tools. The tested version is:
 
 * host/bind-tools 9.14.8
