@@ -38,9 +38,12 @@ programming language [Tcl](https://tcl.tk). The tested versions are:
 
 You need an IRC server to test the bot with these scripts. You can use a public
 one or run your own. The scripts were tested with the IRC server
-[InspIRCd](https://www.inspircd.org/). The tested version is:
+[InspIRCd](https://www.inspircd.org). If you want to interact with the bot and
+the scripts, you need an IRC client. The scripts were tested with the client
+[irssi](https://irssi.org). The tested versions are:
 
 * InspIRCd 3.4.0
+* irssi 1.2.2
 
 The script `funwar.tcl` requires a [PostgreSQL](https://www.postgresql.org)
 server. Additionally, the script depends on the PostgreSQL library `libpq` to
