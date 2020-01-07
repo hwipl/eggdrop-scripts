@@ -30,20 +30,11 @@ Overview:
 
 ## Requirements
 
-The scripts are written for the IRC bot [Eggdrop](http://eggheads.org) in the
+All scripts are written for the IRC bot [Eggdrop](http://eggheads.org) in the
 programming language [Tcl](https://tcl.tk). The tested versions are:
 
 * Eggdrop 1.8.4
 * TCL 8.6
-
-You need an IRC server to test the bot with these scripts. You can use a public
-one or run your own. The scripts were tested with the IRC server
-[InspIRCd](https://www.inspircd.org). If you want to interact with the bot and
-the scripts, you need an IRC client. The scripts were tested with the client
-[irssi](https://irssi.org). The tested versions are:
-
-* InspIRCd 3.4.0
-* irssi 1.2.2
 
 The script `funwar.tcl` requires a [PostgreSQL](https://www.postgresql.org)
 server. Additionally, the script depends on the PostgreSQL library `libpq` to
@@ -61,6 +52,15 @@ The script `host.tcl` requires the tool "host" that is part of the
 [bind](https://www.isc.org/bind/) tools. The tested version is:
 
 * host/bind-tools 9.14.8
+
+You need an IRC server to test the bot with these scripts. You can use a public
+one or run your own. The scripts were tested with the IRC server
+[InspIRCd](https://www.inspircd.org). If you want to interact with the bot and
+the scripts, you need an IRC client. The scripts were tested with the client
+[irssi](https://irssi.org). The tested versions are:
+
+* InspIRCd 3.4.0
+* irssi 1.2.2
 
 ## Setup
 
