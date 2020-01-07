@@ -61,3 +61,16 @@ The script `host.tcl` requires the tool "host" that is part of the
 [bind](https://www.isc.org/bind/) tools. The tested version is:
 
 * host/bind-tools 9.14.8
+
+## Setup
+
+If you already have Eggdrop installed and configured, the basic setup of the
+scripts in this repository consists of the following steps:
+
+* Copy the scripts you want to use from the [scripts](scripts/) folder into
+  your Eggdrop's scripts folder
+* Install the dependencies of the scripts (see above)
+* If necessary, adapt the variables/code inside the scripts
+* Enable the scripts in the scripts section of your Eggdrop's config file with,
+  e.g., `source scripts/date.tcl`
+* (Re-)start your Eggdrop
