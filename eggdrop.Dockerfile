@@ -54,3 +54,9 @@ RUN echo "" >> eggdrop.conf && \
     echo "source scripts/watch.tcl" >> eggdrop.conf && \
     echo "# end of scripts from repository" >> eggdrop.conf && \
     echo "" >> eggdrop.conf
+
+# the original entrypoint.sh from eggrop:1.8.4 changes the dns setting to an
+# external dns address; disable this with a hack
+RUN sed -i \
+    -e 's/^#set dns-servers "8.8.8.8 8.8.4.4"/#set dns-servers "127.0.0.11"/' \
+    eggdrop.conf
