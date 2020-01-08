@@ -23,18 +23,18 @@ namespace eval ::funwar {
 	# channel flag for enabling/disabling
 	setudef flag funwar
 
-	# sql server settings:
-	variable sqlServer "server.ip.add.ress"
-	variable sqlUser "username"
-	variable sqlPassword "password"
+	# sql server address, username and password
+	variable sqlServer "eggdroppostgres"
+	variable sqlUser "eggdrop"
+	variable sqlPassword "eggdropPassword"
 
 	# ET database and table on sql server
-	variable sqlDbnameEt "name of database"
-	variable sqlTblnameEt "name of table"
+	variable sqlDbnameEt "postgres"
+	variable sqlTblnameEt "test.funmatch"
 
 	# RTCW database and table on sql server
-	variable sqlDbnameRtcw "name of database"
-	variable sqlTblnameRtcw "name of table"
+	variable sqlDbnameRtcw "postgres"
+	variable sqlTblnameRtcw "test.funmatch"
 
 	# crontab style definition of how often funwars are posted in channels
 	# format:
