@@ -34,7 +34,7 @@ All scripts are written for the IRC bot [Eggdrop](http://eggheads.org) in the
 programming language [Tcl](https://tcl.tk). The tested versions are:
 
 * Eggdrop 1.8.4
-* TCL 8.6
+* Tcl 8.6
 
 The script `funwar.tcl` requires a [PostgreSQL](https://www.postgresql.org)
 server. Additionally, the script depends on the PostgreSQL library `libpq` to
@@ -74,3 +74,15 @@ scripts in this repository consists of the following steps:
 * Enable the scripts in the scripts section of your Eggdrop's config file with,
   e.g., `source scripts/date.tcl`
 * (Re-)start your Eggdrop
+
+## Docker
+
+This repository contains Dockerfiles to create custom images of Eggdrop and
+PostgreSQL, that are configured for the scripts in this repository. The
+Dockerfiles were tested with docker version 1:19.03.5. You can build the images
+with the following commands:
+
+```console
+$ docker image build -t custom-eggdrop -f eggdrop.Dockerfile .
+$ docker image build -t eggdrop-postgres -f postgres.Dockerfile .
+```
