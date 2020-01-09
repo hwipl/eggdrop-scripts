@@ -86,3 +86,11 @@ with the following commands:
 $ docker image build -t custom-eggdrop -f eggdrop.Dockerfile .
 $ docker image build -t eggdrop-postgres -f postgres.Dockerfile .
 ```
+
+You can run a test setup that uses these images with the `docker-compose.yml`
+file in this repository. It starts an InspIRCd, an eggdrop-postgres, and a
+custom-eggdrop container. You can deploy it with the following command:
+
+```console
+$ docker stack deploy -c docker-compose.yml eggdrop-test
+```
