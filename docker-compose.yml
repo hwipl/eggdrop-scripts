@@ -1,0 +1,17 @@
+version: "3.7"
+services:
+        eggdropIrcd:
+                image: inspircd/inspircd-docker
+                ports:
+                        - 6667:6667
+        eggdropPostgres:
+                image: eggdrop-postgres
+                environment:
+                        POSTGRES_PASSWORD: PostgresPassword
+        customEggdrop:
+                image: custom-eggdrop
+                environment:
+                        NICK: FooBot
+                        SERVER: eggdropircd
+                stdin_open: true
+                tty: true
