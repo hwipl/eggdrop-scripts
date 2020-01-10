@@ -8,24 +8,24 @@ too seriously.
 
 Overview:
 
-* [auth.tcl](scripts/auth.tcl): authenticate the bot with an authentication
+* [auth](scripts/auth.md): authenticate the bot with an authentication
   service when connecting to a server.
-* [beer.tcl](scripts/beer.tcl): give users in a channel a cold beverage.
-* [date.tcl](scripts/date.tcl): post the current date and time.
-* [funwar.tcl](scripts/funwar.tcl): post scheduled online gaming fun matches
+* [beer](scripts/beer.md): give users in a channel a cold beverage.
+* [date](scripts/date.md): post the current date and time.
+* [funwar](scripts/funwar.md): post scheduled online gaming fun matches
   retrieved from a SQL database.
-* [greetings.tcl](scripts/greetings.tcl): greet users that join a channel.
-* [help.tcl](scripts/help.tcl): post a help text.
-* [host.tcl](scripts/host.tcl): resolve IP addresses or host names with the
+* [greetings](scripts/greetings.md): greet users that join a channel.
+* [help](scripts/help.md): post a help text.
+* [host](scripts/host.md): resolve IP addresses or host names with the
   tool "host" and post the result.
-* [insult.tcl](scripts/insult.tcl): generate random insults and post them.
-* [maketiny.tcl](scripts/maketiny.tcl): generate tiny URLs and post them.
-* [match.tcl](scripts/match.tcl): store scheduled online gaming matches in a
+* [insult](scripts/insult.md): generate random insults and post them.
+* [maketiny](scripts/maketiny.md): generate tiny URLs and post them.
+* [match](scripts/match.md): store scheduled online gaming matches in a
   text file and post stored matches.
-* [qstat.tcl](scripts/qstat.tcl): query the status of online gaming servers
+* [qstat](scripts/qstat.md): query the status of online gaming servers
   with the tool "qstat" and post the result.
-* [topic.tcl](scripts/topic.tcl): change the topic of a channel.
-* [watch.tcl](scripts/watch.tcl): watch the online and offline status of users
+* [topic](scripts/topic.md): change the topic of a channel.
+* [watch](scripts/watch.md): watch the online and offline status of users
   and post status changes.
 
 ## Requirements
