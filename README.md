@@ -43,15 +43,21 @@ connect to the PostgreSQL server. The tested versions are:
 * PostgreSQL 12.1
 * libpq 12.1
 
-The script `qstat.tcl` requires the tool
-[qstat](https://github.com/multiplay/qstat). The tested version is:
-
-* qstat 2.15 (Pre-release: commit 85fbecb on Dec 1, 2018)
-
 The script `host.tcl` requires the tool "host" that is part of the
 [bind](https://www.isc.org/bind/) tools. The tested version is:
 
 * host/bind-tools 9.14.8
+
+The script `maketiny.tcl` requires the tool
+[wget](https://www.gnu.org/software/wget/) or something compatible. The tested
+version is:
+
+* wget/BusyBox v1.27.2
+
+The script `qstat.tcl` requires the tool
+[qstat](https://github.com/multiplay/qstat). The tested version is:
+
+* qstat 2.15 (Pre-release: commit 85fbecb on Dec 1, 2018)
 
 You need an IRC server to test the bot with these scripts. You can use a public
 one or run your own. The scripts were tested with the IRC server
