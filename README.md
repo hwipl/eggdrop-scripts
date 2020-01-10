@@ -94,3 +94,11 @@ custom-eggdrop container. You can deploy it with the following command:
 ```console
 $ docker stack deploy -c docker-compose.yml eggdrop-test
 ```
+
+You can control your Eggdrop bot by attaching to the custom-eggdrop container.
+For example, you can instruct your bot to join a channel (`.+chan #channel`)
+and set channel flags to setup scripts in specific channels (`.chanset #channel
++flag`).
+
+If you want to interact with your bot, you can run an IRC client like irssi and
+connect to `localhost:6667`.
