@@ -5,6 +5,10 @@ tool "host" with the `!host` command.
 
 ## Setup
 
+The script requires the tool "host" that is part of the
+[bind](https://www.isc.org/bind/) tools. If the "host" tool is not available on
+your system, you need to install it first.
+
 You can change the path to the "host" tool in the namespace variable `hostCmd`
 that you can find at the top of the script:
 
