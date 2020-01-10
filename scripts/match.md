@@ -1,9 +1,9 @@
 # match.tcl
 
-This script was originally created to save clan matches in a file,
-to show all the saved matches and to be able to remove them from
-the file again. But it could be used for storing, showing and
-deleting arbitrary lines of text in a file.
+The script [match.tcl](match.tcl) was originally created to save clan matches
+in a file, to show all the saved matches and to be able to remove them from the
+file again. But it could be used for storing, showing and deleting arbitrary
+lines of text in a file.
 
 ## Setup
 
