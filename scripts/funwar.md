@@ -49,7 +49,7 @@ variable sqlTblnameRtcw "test.funmatch"
 ```
 
 You can configure how often the script posts in all enabled channels in the
-following namespace variables:
+following namespace variable:
 
 ```tcl
 # crontab style definition of how often funwars are posted in channels
@@ -98,19 +98,19 @@ in the channel `#test` with the following Eggdrop command:
 After enabling the script in a channel, you can use the commands in that
 channel as shown below.
 
-Post ET matches:
+Post ET matches in the current channel:
 
 ```
 !et
 ```
 
-Post RTCW matches:
+Post RTCW matches in the current channel:
 
 ```
 !rtcw
 ```
 
-Post ET and RTCW matches:
+Post ET and RTCW matches in the current channel:
 
 ```
 !funwars
