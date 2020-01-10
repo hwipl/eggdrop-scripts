@@ -12,6 +12,9 @@
 # service is disabled by default. Uncomment the respective bind line below if
 # you really need it. Do not forget to comment it out again as soon as you have
 # registered the account.
+#
+# See https://github.com/hwipl/eggdrop-scripts for the latest version and
+# additional information including the license (MIT).
 
 # tested versions, might run on earlier versions
 package require Tcl 8.6

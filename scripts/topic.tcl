@@ -11,6 +11,9 @@
 #
 # Enable for a channel with:    .chanset #channel +topic
 # Disable for a channel with:   .chanset #channel -topic
+#
+# See https://github.com/hwipl/eggdrop-scripts for the latest version and
+# additional information including the license (MIT).
 
 # tested versions, might run on earlier versions
 package require Tcl 8.6
