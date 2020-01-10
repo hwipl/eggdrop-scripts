@@ -1,67 +1,15 @@
 # funwar.tcl
 
-This script was created to post fun clan wars/matches for the two multiplayer
-games RTCW and ET in channels periodically and with the commands below. The
-matches are retrieved from tables in postreSQL databases.
-
-```
-Usage:
-      !et                     post ET matches
-      !rtcw                   post RTCW matches
-      !funwars                post ET and RTCW matches
-
-Enable for a channel with:    .chanset #channel +funwar
-Disable for a channel with:   .chanset #channel -funwar
-```
+The script [funwar.tcl](funwar.tcl) was created to post fun clan wars/matches
+for the two multiplayer games RTCW and ET in channels periodically and with the
+commands below. The matches are retrieved from tables in postreSQL databases.
 
 ## Setup
 
-The script requires a PostgreSQL server. So, this section shows an example of
-how to setup the SQL server, eggdrop, and this script using docker containers.
-
-### PostgreSQL
-
-Run a new postgres container for eggdrop and set the password of the "postgres"
-superuser:
-
-```console
-$ docker run --name eggdropPostgres \
-	-e POSTGRES_PASSWORD=postgresUserPassword -d postgres
-```
-
-In the following steps, we assume that the new postgres server is listening on
-the IP address 172.17.0.3.
-
-Connect to postgres as superuser "postgres":
-
-```console
-$ docker run -it --rm --network bridge postgres psql -h 172.17.0.3 -U postgres
-```
-
-Add test schema for user "eggdrop" and add the user in the postgres session:
-
-```sql
-CREATE SCHEMA test;
-CREATE USER eggdrop PASSWORD 'eggdropPassword';
-GRANT ALL ON SCHEMA test TO eggdrop;
-GRANT ALL ON ALL TABLES IN SCHEMA test TO eggdrop;
-```
-
-Disconnect superuser "postgres" from postgres:
-
-```
-\q
-```
-
-Reconnect to postgres as user "eggdrop":
-
-```console
-$ docker run -it --rm --network bridge postgres psql -h 172.17.0.3 \
-	-d postgres -U eggdrop
-```
-
-Add table consisting of id, date, time, xonx, clantag, irc, www, server, and
-org as user "eggdrop" in the postgres session:
+The script requires databases on a PostgreSQL server that contains tables
+consisting of `id`, `date`, `time`, `xonx`, `clantag`, `irc`, `www`, `server`,
+and `org`. For example, you could create a table that works with the script on
+your PostgreSQL server with the following sql statement:
 
 ```sql
 CREATE TABLE test.funmatch(
@@ -77,78 +25,95 @@ CREATE TABLE test.funmatch(
 );
 ```
 
-Insert some testing entries into the table:
+The script uses the `tdbc::postgres` database connector to connect to your
+PostgreSQL server. This connector requires the `libpq` library. If it is not
+available on your system, you need to install it first.
 
-```sql
-INSERT INTO test.funmatch (time, xonx, clantag, irc, www, server, org)
-VALUES
-('18:30', 8, '[WIN]', '#win', 'www.winclan.com', 'et.winclan.com:1337',
-'winrar'),
-('19:30', 16, '[FAIL]', '#fail', 'www.failclan.com', 'et.failclan.com:7331',
-'failbot'),
-('20:30', 32, '<unknown>', '#unknown', 'www.unknownclan.com',
-'et.unknownclan.com:3000', 'incognito');
+At the top of the script you can find a section containing namespace variables
+to configure the script. You can configure the SQL settings in the following
+namespace variables:
+
+```tcl
+# sql server address, username and password
+variable sqlServer "eggdroppostgres"
+variable sqlUser "eggdrop"
+variable sqlPassword "eggdropPassword"
+
+# ET database and table on sql server
+variable sqlDbnameEt "postgres"
+variable sqlTblnameEt "test.funmatch"
+
+# RTCW database and table on sql server
+variable sqlDbnameRtcw "postgres"
+variable sqlTblnameRtcw "test.funmatch"
 ```
 
-Disconnect user "eggdrop" from postgres:
+You can configure how often the script posts in all enabled channels in the
+following namespace variables:
 
-```
-\q
-```
-
-### Eggdrop
-
-The script uses the `tdbc::postgres` database connector. This connector
-requires the `libpq` library that is not installed in the official eggdrop
-docker image. So, you need to install it in the container. One way is shown in
-the following steps:
-
-The steps assume that you have an eggdrop container running, e.g., with a
-command line similar to the following one:
-
-```console
-$ docker run -ti -e NICK=FooBot -e SERVER=172.17.0.2 \
-	-v ~/eggdrop/data:/home/eggdrop/eggdrop/data \
-	-v ~/eggdrop/custom-scripts:/home/eggdrop/eggdrop/custom-scripts \
-	eggdrop
+```tcl
+# crontab style definition of how often funwars are posted in channels
+# format:
+#       "MIN HOUR DAY MONTH YEAR"
+# examples:
+#       "20,50 * * * *"         post at minute 20 and 50 of every hour
+#       "*/10 * * * *"          post every ten minutes
+variable autoCron "20,50 * * * *"
 ```
 
-Get the ID of your running eggdrop container using `docker ps`, e.g.,
-`abc123def456`. Then, attach to the running eggdrop container and run the bash
-shell in it:
+You can configure the names of the commands (triggers) and the output headers
+and footer in the following namespace variables:
 
-```console
-$ docker exec -ti abc123def456 bash
+```tcl
+# trigger configuration for ET, RTCW and both
+variable triggerEt "!et"
+variable triggerRtcw "!rtcw"
+variable triggerBoth "!funwars"
+
+# output configuration
+variable outputHeader "*** Funwars: ***"
+variable outputHeader2 "Game: Date/Time: XonX: Clantag: IRC:"
+variable outputFooter "*** end of funwars list ***"
+}
 ```
 
-Inside the shell session, install `libpq`:
-
-```console
-# apk add libpq
-```
-
-Remove eggdrop's pid file, so we can commit the above changes to a new image
-without running into eggdrop issues when we start the new container image:
-
-```console
-# rm pid.FooBot
-```
-
-Close the shell session, e.g., with `exit`. Then, commit your changes to a new
-image called `eggdrop-custom`:
+You can enable the script in a specific channel by setting the `funwar` flag
+for the channel in your Eggdrop. For example, enable the script in the channel
+`#test` with the following Eggdrop command:
 
 ```
-$ docker commit abc123def456 eggdrop-custom
+.chanset #test +funwar
 ```
 
-After this, you can shut down your eggdrop container and restart it using the
-new image, e.g., with a command line similar to the following one:
+Accordingly, you can disable the script in a specific channel by removing the
+`funwar` flag from the channel in your Eggdrop. For example, disable the script
+in the channel `#test` with the following Eggdrop command:
 
-```console
-$ docker run -ti -e NICK=FooBot -e SERVER=172.17.0.2 \
-	-v ~/eggdrop/data:/home/eggdrop/eggdrop/data \
-        -v ~/eggdrop/custom-scripts:/home/eggdrop/eggdrop/custom-scripts \
-	eggdrop-custom
+```
+.chanset #test -funwar
+```
+
+## Usage
+
+After enabling the script in a channel, you can use the commands in that
+channel as shown below.
+
+Post ET matches:
+
+```
+!et
+```
+
+Post RTCW matches:
+
+```
+!rtcw
+```
+
+Post ET and RTCW matches:
+
+```
+!funwars
 ```
 
 ## Examples
